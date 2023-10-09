@@ -1,0 +1,4 @@
+1. We have a mongodb cluster at ScaleU, on Adi's personal account
+2. AWS S3 bucket at scaleudata, all user uploaded data and corpus info is in there
+3. AWS SQS queue with name scaleu_newdocs.fifo, contains messages with new documents to embed on there
+4. Pinecone Project ScaleU, with index name nodes in there. All data should be in the mongodb cluster
