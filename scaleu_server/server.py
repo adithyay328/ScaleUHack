@@ -5,6 +5,9 @@ from pymongo import MongoClient
 from bson.json_util import loads, dumps
 import openai
 
+# Set openai key
+openai.api_key = "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"
+
 from datetime import datetime
 import random
 import secrets
@@ -82,12 +85,22 @@ def sendMessage():
         )
   else:
     # Otherwise, create a new conversation
+
+    # First, summarize the message
+    summary = openai.ChatCompletion.create(
+      model="gpt-3.5-turbo",
+      messages=[{"role":"user", "content":f"Please write a summary of the following message that would be suitable for a title of the conversation:\nMessage:{message}\n\nYour summary of that message:"}],
+      temperature=0.3,
+      max_tokens=20,
+    )
+
     conversations.insert_one({
       "conversation_id": conversation_id,
       "userid": userid, # This is the user id of the person who started the conversation,
+      "summary": summary.choices[0]["message"]["content"],
       "usermessages": [{
         "timestamp": datetime.utcnow(),
-        "message": message
+        "message": message,
       }],
       "botmessages": []
     })
