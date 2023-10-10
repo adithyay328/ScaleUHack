@@ -34,8 +34,14 @@ app = Flask(__name__)
 # Get a user name, and return a user object
 @app.route("/api/data/user/<int:userid>", methods=["GET"])
 def getUser(userid):
-  print(userid)
   res = users.find_one({"userid": userid})
+
+  return dumps(res)
+
+# Given a conversation id, return the conversation object
+@app.route("/api/data/conversation/<string:conversation_id>", methods=["GET"])
+def getConversation(conversation_id):
+  res = conversations.find_one({"conversation_id": conversation_id})
 
   return dumps(res)
 
