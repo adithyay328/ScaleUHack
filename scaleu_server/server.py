@@ -27,9 +27,11 @@ conversations = db["conversations"]
 
 # Load up our flask server
 from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 
 # Create our flask server
 app = Flask(__name__)
+CORS(app)
 
 # Get a user name, and return a user object
 @app.route("/api/data/user/<int:userid>", methods=["GET"])
@@ -44,6 +46,22 @@ def getConversation(conversation_id):
   res = conversations.find_one({"conversation_id": conversation_id})
 
   return dumps(res)
+
+def generateResponse(query, conversation_id):
+  """
+  Generates a response form chatGPT, given a query and a conversation id
+  to pull old context from
+  """
+
+  # For now, just make a naive response
+  response = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role":"user", "content":query}],
+    temperature=0.3,
+    max_tokens=20,
+  )
+
+  return response.choices[0]["message"]["content"]
 
 # Allow users to send a message to a conversation in here
 @app.route("/api/conversation/send", methods=["POST"])
@@ -92,14 +110,15 @@ def sendMessage():
   else:
     # Otherwise, create a new conversation
 
-    # First, summarize the message
+    # First, summarize the message to get a title
     summary = openai.ChatCompletion.create(
       model="gpt-3.5-turbo",
       messages=[{"role":"user", "content":f"Please write a summary of the following message that would be suitable for a title of the conversation:\nMessage:{message}\n\nYour summary of that message:"}],
       temperature=0.3,
       max_tokens=20,
     )
-
+    
+    # Insert into database
     conversations.insert_one({
       "conversation_id": conversation_id,
       "userid": userid, # This is the user id of the person who started the conversation,
@@ -121,8 +140,26 @@ def sendMessage():
       }
     )
   
+  # Generate the response
+  response = generateResponse(message, conversation_id)
+
+  # Update the database
+  conversations.update_one(
+    {"conversation_id": conversation_id},
+    {
+      "$push": {
+        "botmessages": {
+          "timestamp": datetime.utcnow(),
+          "message": response
+        }
+      }
+    }
+  )
+  
+  # Return the conversation id and the response
   return json.dumps({
-    "conversation_id": conversation_id
+    "conversation_id": conversation_id,
+    "response": response
   })
 
 
